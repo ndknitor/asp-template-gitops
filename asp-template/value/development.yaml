@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: asp-template-deployment
+  name: asp-template-deployment-development
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: asp-template
+      app: asp-template-development
   template:
     metadata:
       labels:
-        app: asp-template
+        app: asp-template-development
     spec:
       imagePullSecrets:
       - name: local-registry-secret
       containers:
-      - name: asp-template-container
+      - name: asp-template-container-development
         image: utility.ndkn.local/ndkn/asp-template
         imagePullPolicy: Always
         ports:
@@ -33,10 +33,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: asp-template-service
+  name: asp-template-service-development
 spec:
   selector:
-    app: asp-template
+    app: asp-template-development
   ports:
     - protocol: TCP
       port: 8080
