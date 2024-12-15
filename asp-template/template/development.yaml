@@ -16,7 +16,7 @@ spec:
       - name: local-registry-secret
       containers:
       - name: asp-template-container
-        image: utility.ndkn.local/ndkn/asp-template:{{VERSION}}
+        image: utility.ndkn.local/ndkn/asp-template
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -27,3 +27,18 @@ spec:
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: "Development"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: asp-template-service
+spec:
+  selector:
+    app: asp-template
+  ports:
+    - protocol: TCP
+      port: 8080
+      nodePort: 30000
+  type: NodePort
