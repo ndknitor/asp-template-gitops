@@ -22,6 +22,44 @@ pipeline {
         //     }
         // }
 
+        stage('Clone Repositories') {
+            steps {
+                script {
+                    // Clone the `project` repository into a specific directory
+                    dir('asp-template-project') { 
+                        git branch: 'main', 
+                            credentialsId: 'github_credential', 
+                            url: 'https://github.com/ndknitor/AspTemplate'
+                    }
+
+                    // Clone the `ops` repository into a separate directory
+                    dir('asp-template-ops') { 
+                        git branch: 'main', 
+                            credentialsId: 'github_credential', 
+                            url: 'https://github.com/ndknitor/asp-template-gitops'
+                    }
+                }
+            }
+        }
+        stage('List Files in Project Repo') {
+            steps {
+                script {
+                    dir('project') { // Change directory to 'project'
+                        sh 'ls -l' // List files in the project directory
+                    }
+                }
+            }
+        }
+        stage('List Files in Ops Repo') {
+            steps {
+                script {
+                    dir('ops') { // Change directory to 'ops'
+                        sh 'ls -l' // List files in the ops directory
+                    }
+                }
+            }
+        }
+
         // stage('Build') {
         //     when {
         //         expression { params.CD == "None" || params.CD == "Development" || params.Auto }
@@ -51,93 +89,93 @@ pipeline {
         //         }
         //     }
         // }
-        stage('Build image') {
-            when {
-                expression { params.CD == "Development" || params.Auto}
-            }
-            steps {
-                    sh 'docker build -t ${IMAGE_NAME}:development .'
-            }
-        }
-        stage('Registry authentication') {
-            steps {
-                script{
-                    withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh 'docker login utility.ndkn.local -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"'
-                    }
-                }
-            }
-        }
-        stage('Push image to registry') {
-            when {
-                expression { params.CD == "Development" || params.Auto}
-            }
-            steps {
-                script {
-                    sh 'docker push ${IMAGE_NAME}:development'
+        // stage('Build image') {
+        //     when {
+        //         expression { params.CD == "Development" || params.Auto}
+        //     }
+        //     steps {
+        //             sh 'docker build -t ${IMAGE_NAME}:development .'
+        //     }
+        // }
+        // stage('Registry authentication') {
+        //     steps {
+        //         script{
+        //             withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+        //                 sh 'docker login utility.ndkn.local -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"'
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('Push image to registry') {
+        //     when {
+        //         expression { params.CD == "Development" || params.Auto}
+        //     }
+        //     steps {
+        //         script {
+        //             sh 'docker push ${IMAGE_NAME}:development'
                     
-                }
-            }
-        }
-        stage('Deploy development') {
-            when {
-                expression { params.CD == "Development" || params.Auto}
-            }
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
-                        sh '''
-                        curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_DEVELOPMENT}&version=v1&kind=Deployment&group=apps" 
-                        '''
-                    }
-                }
-            }
-        }
-        stage('Deploy staging') {
-            when {
-                expression { params.CD == "Staging" || params.CD == "PassProduction" || params.Auto}
-            }
-            steps {
-                    withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
-                        sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
-                        sh 'docker push ${IMAGE_NAME}:staging'
-                        sh '''
-                            curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
-                        '''
-                    }
+        //         }
+        //     }
+        // }
+        // stage('Deploy development') {
+        //     when {
+        //         expression { params.CD == "Development" || params.Auto}
+        //     }
+        //     steps {
+        //         script {
+        //             withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+        //                 sh '''
+        //                 curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_DEVELOPMENT}&version=v1&kind=Deployment&group=apps" 
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('Deploy staging') {
+        //     when {
+        //         expression { params.CD == "Staging" || params.CD == "PassProduction" || params.Auto}
+        //     }
+        //     steps {
+        //             withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+        //                 sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
+        //                 sh 'docker push ${IMAGE_NAME}:staging'
+        //                 sh '''
+        //                     curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
+        //                 '''
+        //             }
 
-            }
-        }
-        stage('Scan') {
-            when {
-                expression { params.CD == "Staging" || params.CD == "PassProduction"}
-            }
-            parallel {
-                stage('Image scan') {
-                    steps {
-                        sh 'trivy image ${IMAGE_NAME}:staging'
-                    }
-                }
-                // stage('Vulnerability scan') {
-                //     steps {
-                //         sshagent(['ssh-remote']) {
-                //             sh """
-                //                 ssh -o StrictHostKeyChecking=no ${username}@${devHost} \
-                //                 '
-                //                     docker run --rm -t softwaresecurityproject/zap-stable zap-api-scan.py -I -t http://${devHost}:10000/swagger/v1/swagger.json -f openapi \
-                //                     -z "-config replacer.full_list(0).description=auth1 \
-                //                     -config replacer.full_list(0).enabled=true \
-                //                     -config replacer.full_list(0).matchtype=REQ_HEADER \
-                //                     -config replacer.full_list(0).matchstr=Authorization \
-                //                     -config replacer.full_list(0).regex=false \
-                //                     -config replacer.full_list(0).replacement=Bearer\\ \${asp-template-user-jwt}"
-                //                 '
-                //             """
-                //         }
-                //     }
-                // }
-            }
-        }
+        //     }
+        // }
+        // stage('Scan') {
+        //     when {
+        //         expression { params.CD == "Staging" || params.CD == "PassProduction"}
+        //     }
+        //     parallel {
+        //         stage('Image scan') {
+        //             steps {
+        //                 sh 'trivy image ${IMAGE_NAME}:staging'
+        //             }
+        //         }
+        //         // stage('Vulnerability scan') {
+        //         //     steps {
+        //         //         sshagent(['ssh-remote']) {
+        //         //             sh """
+        //         //                 ssh -o StrictHostKeyChecking=no ${username}@${devHost} \
+        //         //                 '
+        //         //                     docker run --rm -t softwaresecurityproject/zap-stable zap-api-scan.py -I -t http://${devHost}:10000/swagger/v1/swagger.json -f openapi \
+        //         //                     -z "-config replacer.full_list(0).description=auth1 \
+        //         //                     -config replacer.full_list(0).enabled=true \
+        //         //                     -config replacer.full_list(0).matchtype=REQ_HEADER \
+        //         //                     -config replacer.full_list(0).matchstr=Authorization \
+        //         //                     -config replacer.full_list(0).regex=false \
+        //         //                     -config replacer.full_list(0).replacement=Bearer\\ \${asp-template-user-jwt}"
+        //         //                 '
+        //         //             """
+        //         //         }
+        //         //     }
+        //         // }
+        //     }
+        // }
         // stage('Clone Ops Repository') {
         //     steps {
         //         script {
@@ -147,12 +185,12 @@ pipeline {
         //     }
         // }
     }
-    post {
-        always {
-            sh 'docker image prune -f'
-            sh 'docker logout ${REGISTRY}'
-        }
-    }
+    // post {
+    //     always {
+    //         sh 'docker image prune -f'
+    //         sh 'docker logout ${REGISTRY}'
+    //     }
+    // }
 }
 
         
