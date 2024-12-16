@@ -13,6 +13,12 @@ pipeline {
         ARGOCD_RESOURCE_NAME_STAGING = "asp-template-deployment-staging"
     }
     stages {
+        stage('Dummy')
+        {
+            steps{
+                sh 'echo Hello'
+            }
+        }
         // stage('Clone repository') {
         //     when {
         //         expression { params.CD == "Development" }
