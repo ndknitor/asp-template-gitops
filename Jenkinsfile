@@ -22,9 +22,10 @@ pipeline {
         stage('Clone repository') {
             steps {
                 script {
-                    git branch: 'main', credentialsId: 'github_credential', url: 'https://github.com/ndknitor/AspTemplate'
+                    dir('projects') {
+                       git branch: 'main', credentialsId: 'github_credential', url: 'https://github.com/ndknitor/AspTemplate'
+                    }
                 }
-                
             }
         }
 
