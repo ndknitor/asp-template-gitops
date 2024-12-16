@@ -22,43 +22,43 @@ pipeline {
         //     }
         // }
 
-        stage('Clone Repositories') {
-            steps {
-                script {
-                    // Clone the `project` repository into a specific directory
-                    dir('asp-template-project') { 
-                        git branch: 'main', 
-                            credentialsId: 'github_credential', 
-                            url: 'https://github.com/ndknitor/AspTemplate'
-                    }
+        // stage('Clone Repositories') {
+        //     steps {
+        //         script {
+        //             // Clone the `project` repository into a specific directory
+        //             dir('asp-template-project') { 
+        //                 git branch: 'main', 
+        //                     credentialsId: 'github_credential', 
+        //                     url: 'https://github.com/ndknitor/AspTemplate'
+        //             }
 
-                    // Clone the `ops` repository into a separate directory
-                    dir('asp-template-ops') { 
-                        git branch: 'main', 
-                            credentialsId: 'github_credential', 
-                            url: 'https://github.com/ndknitor/asp-template-gitops'
-                    }
-                }
-            }
-        }
-        stage('List Files in Project Repo') {
-            steps {
-                script {
-                    dir('project') { // Change directory to 'project'
-                        sh 'ls -l' // List files in the project directory
-                    }
-                }
-            }
-        }
-        stage('List Files in Ops Repo') {
-            steps {
-                script {
-                    dir('ops') { // Change directory to 'ops'
-                        sh 'ls -l' // List files in the ops directory
-                    }
-                }
-            }
-        }
+        //             // Clone the `ops` repository into a separate directory
+        //             dir('asp-template-ops') { 
+        //                 git branch: 'main', 
+        //                     credentialsId: 'github_credential', 
+        //                     url: 'https://github.com/ndknitor/asp-template-gitops'
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('List Files in Project Repo') {
+        //     steps {
+        //         script {
+        //             dir('project') { // Change directory to 'project'
+        //                 sh 'ls -l' // List files in the project directory
+        //             }
+        //         }
+        //     }
+        // }
+        // stage('List Files in Ops Repo') {
+        //     steps {
+        //         script {
+        //             dir('ops') { // Change directory to 'ops'
+        //                 sh 'ls -l' // List files in the ops directory
+        //             }
+        //         }
+        //     }
+        // }
 
         // stage('Build') {
         //     when {
