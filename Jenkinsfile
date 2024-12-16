@@ -19,17 +19,14 @@ pipeline {
                 sh 'echo Hello'
             }
         }
-        stage('Clone repository') {
-            when {
-                expression { params.CD == "Development" }
-            }
-            agent {
-                customWorkspace '/var/lib/jenkins/projects' // Set custom workspace
-            }
-            steps {
-                git branch: 'main', credentialsId: 'Ndkn', url: 'https://github.com/ndknitor/AspTemplate'
-            }
-        }
+        // stage('Clone repository') {
+        //     when {
+        //         expression { params.CD == "Development" }
+        //     }
+        //     steps {
+        //         git branch: 'main', credentialsId: 'Ndkn', url: 'https://github.com/ndknitor/AspTemplate'
+        //     }
+        // }
 
         // stage('Clone Repositories') {
         //     steps {
