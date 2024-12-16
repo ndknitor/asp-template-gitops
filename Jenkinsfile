@@ -20,6 +20,9 @@ pipeline {
             }
         }
         stage('Clone repository') {
+            when {
+                expression { params.CD == "None" || params.CD == "Development" || params.Auto }
+            }
             steps {
                 script {
                     dir('projects') {
@@ -28,128 +31,97 @@ pipeline {
                 }
             }
         }
-
-        // stage('Clone Repositories') {
-        //     steps {
-        //         script {
-        //             // Clone the `project` repository into a specific directory
-        //             dir('asp-template-project') { 
-        //                 git branch: 'main', 
-        //                     credentialsId: 'github_credential', 
-        //                     url: 'https://github.com/ndknitor/AspTemplate'
-        //             }
-
-        //             // Clone the `ops` repository into a separate directory
-        //             dir('asp-template-ops') { 
-        //                 git branch: 'main', 
-        //                     credentialsId: 'github_credential', 
-        //                     url: 'https://github.com/ndknitor/asp-template-gitops'
-        //             }
-        //         }
-        //     }
-        // }
-        // stage('List Files in Project Repo') {
-        //     steps {
-        //         script {
-        //             dir('project') { // Change directory to 'project'
-        //                 sh 'ls -l' // List files in the project directory
-        //             }
-        //         }
-        //     }
-        // }
-        // stage('List Files in Ops Repo') {
-        //     steps {
-        //         script {
-        //             dir('ops') { // Change directory to 'ops'
-        //                 sh 'ls -l' // List files in the ops directory
-        //             }
-        //         }
-        //     }
-        // }
-
-        // stage('Build') {
-        //     when {
-        //         expression { params.CD == "None" || params.CD == "Development" || params.Auto }
-        //     }
-        //     steps {
-        //         sh 'export DOTNET_CLI_TELEMETRY_OPTOUT=0'
-        //         sh 'dotnet restore'
-        //         sh 'dotnet build --no-restore'
-        //     }
-        // }
-        // stage('Test') {
-        //     when {
-        //         expression { params.CD == "None" || params.CD == "Development" || params.Auto}
-        //     }
-        //     parallel {
-        //         stage('Unit Tests') {
-        //             steps {
-        //                 echo 'Running unit tests...'
-        //                 // Add your unit test steps here
-        //             }
-        //         }
-        //         stage('Integration Tests') {
-        //             steps {
-        //                 echo 'Running integration tests...'
-        //                 // Add your integration test steps here
-        //             }
-        //         }
-        //     }
-        // }
-        // stage('Build image') {
-        //     when {
-        //         expression { params.CD == "Development" || params.Auto}
-        //     }
-        //     steps {
-        //             sh 'docker build -t ${IMAGE_NAME}:development .'
-        //     }
-        // }
-        // stage('Registry authentication') {
-        //     steps {
-        //         script{
-        //             withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-        //                 sh 'docker login utility.ndkn.local -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"'
-        //             }
-        //         }
-        //     }
-        // }
-        // stage('Push image to registry') {
-        //     when {
-        //         expression { params.CD == "Development" || params.Auto}
-        //     }
-        //     steps {
-        //         script {
-        //             sh 'docker push ${IMAGE_NAME}:development'
+        stage('Build') {
+            when {
+                expression { params.CD == "None" || params.CD == "Development" || params.Auto }
+            }
+            steps {
+                script {
+                    dir('projects') {
+                        sh 'export DOTNET_CLI_TELEMETRY_OPTOUT=0'
+                        sh 'dotnet restore'
+                        sh 'dotnet build --no-restore'
+                    }
+                }
+            }
+        }
+        stage('Test') {
+            when {
+                expression { params.CD == "None" || params.CD == "Development" || params.Auto}
+            }
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        echo 'Running unit tests...'
+                        // Add your unit test steps here
+                    }
+                }
+                stage('Integration Tests') {
+                    steps {
+                        echo 'Running integration tests...'
+                        // Add your integration test steps here
+                    }
+                }
+            }
+        }
+        stage('Build image') {
+            when {
+                expression { params.CD == "Development" || params.Auto}
+            }
+            steps {
+                script {
+                    dir('projects') {
+                        sh 'docker build -t ${IMAGE_NAME}:development .'
+                    }
+                }
+            }
+        }
+        stage('Registry authentication') {
+            steps {
+                script{
+                    withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh 'docker login utility.ndkn.local -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"'
+                    }
+                }
+            }
+        }
+        stage('Push image to registry') {
+            when {
+                expression { params.CD == "Development" || params.Auto}
+            }
+            steps {
+                script {
+                    sh 'docker push ${IMAGE_NAME}:development'
                     
-        //         }
-        //     }
-        // }
-        // stage('Deploy development') {
-        //     when {
-        //         expression { params.CD == "Development" || params.Auto}
-        //     }
-        //     steps {
-        //         script {
-        //             withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
-        //                 sh '''
-        //                 curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_DEVELOPMENT}&version=v1&kind=Deployment&group=apps" 
-        //                 '''
-        //             }
-        //         }
-        //     }
-        // }
-        // stage('Deploy staging') {
-        //     when {
-        //         expression { params.CD == "Staging" || params.CD == "PassProduction" || params.Auto}
-        //     }
-        //     steps {
-        //             withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
-        //                 sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
-        //                 sh 'docker push ${IMAGE_NAME}:staging'
-        //                 sh '''
-        //                     curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
-        //                 '''
-        //             }
+                }
+            }
+        }
+        stage('Deploy development') {
+            when {
+                expression { params.CD == "Development" || params.Auto}
+            }
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                        sh '''
+                        curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_DEVELOPMENT}&version=v1&kind=Deployment&group=apps" 
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Deploy staging') {
+            when {
+                expression { params.CD == "Staging" || params.CD == "PassProduction" || params.Auto}
+            }
+            steps {
+                    withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                        sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
+                        sh 'docker push ${IMAGE_NAME}:staging'
+                        sh '''
+                            curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
+                        '''
+                    }
 
         //     }
         // }
