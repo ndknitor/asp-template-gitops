@@ -115,61 +115,60 @@ pipeline {
                 expression { params.CD == "Staging" || params.CD == "PassProduction" || params.Auto}
             }
             steps {
-                    withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
-                        sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
-                        sh 'docker push ${IMAGE_NAME}:staging'
-                        sh '''
-                            curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
-                        '''
+                withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                    sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
+                    sh 'docker push ${IMAGE_NAME}:staging'
+                    sh '''
+                        curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
+                    '''
+                }
+            }
+        }
+        stage('Scan') {
+            when {
+                expression { params.CD == "Staging" || params.CD == "PassProduction"}
+            }
+            parallel {
+                stage('Image scan') {
+                    steps {
+                        sh 'trivy image ${IMAGE_NAME}:staging'
                     }
-
-        //     }
-        // }
-        // stage('Scan') {
-        //     when {
-        //         expression { params.CD == "Staging" || params.CD == "PassProduction"}
-        //     }
-        //     parallel {
-        //         stage('Image scan') {
-        //             steps {
-        //                 sh 'trivy image ${IMAGE_NAME}:staging'
-        //             }
-        //         }
-        //         // stage('Vulnerability scan') {
-        //         //     steps {
-        //         //         sshagent(['ssh-remote']) {
-        //         //             sh """
-        //         //                 ssh -o StrictHostKeyChecking=no ${username}@${devHost} \
-        //         //                 '
-        //         //                     docker run --rm -t softwaresecurityproject/zap-stable zap-api-scan.py -I -t http://${devHost}:10000/swagger/v1/swagger.json -f openapi \
-        //         //                     -z "-config replacer.full_list(0).description=auth1 \
-        //         //                     -config replacer.full_list(0).enabled=true \
-        //         //                     -config replacer.full_list(0).matchtype=REQ_HEADER \
-        //         //                     -config replacer.full_list(0).matchstr=Authorization \
-        //         //                     -config replacer.full_list(0).regex=false \
-        //         //                     -config replacer.full_list(0).replacement=Bearer\\ \${asp-template-user-jwt}"
-        //         //                 '
-        //         //             """
-        //         //         }
-        //         //     }
-        //         // }
-        //     }
-        // }
-        // stage('Clone Ops Repository') {
-        //     steps {
-        //         script {
-        //             // Clone the source repository
-        //             git credentialsId: "github_credential", url: "https://github.com/ndknitor/asp-template-gitops"
-        //         }
-        //     }
-        // }
+                }
+                // stage('Vulnerability scan') {
+                //     steps {
+                //         sshagent(['ssh-remote']) {
+                //             sh """
+                //                 ssh -o StrictHostKeyChecking=no ${username}@${devHost} \
+                //                 '
+                //                     docker run --rm -t softwaresecurityproject/zap-stable zap-api-scan.py -I -t http://${devHost}:10000/swagger/v1/swagger.json -f openapi \
+                //                     -z "-config replacer.full_list(0).description=auth1 \
+                //                     -config replacer.full_list(0).enabled=true \
+                //                     -config replacer.full_list(0).matchtype=REQ_HEADER \
+                //                     -config replacer.full_list(0).matchstr=Authorization \
+                //                     -config replacer.full_list(0).regex=false \
+                //                     -config replacer.full_list(0).replacement=Bearer\\ \${asp-template-user-jwt}"
+                //                 '
+                //             """
+                //         }
+                //     }
+                // }
+            }
+        }
+        stage('Clone Ops Repository') {
+            steps {
+                script {
+                    // Clone the source repository
+                    git credentialsId: "github_credential", url: "https://github.com/ndknitor/asp-template-gitops"
+                }
+            }
+        }
     }
-    // post {
-    //     always {
-    //         sh 'docker image prune -f'
-    //         sh 'docker logout ${REGISTRY}'
-    //     }
-    // }
+    post {
+        always {
+            sh 'docker image prune -f'
+            sh 'docker logout ${REGISTRY}'
+        }
+    }
 }
 
         
