@@ -16,7 +16,7 @@ spec:
       - name: local-registry-secret
       containers:
       - name: asp-template-container-staging
-        image: utility.ndkn.local/ndkn/asp-template
+        image: utility.ndkn.local/ndkn/asp-template:staging
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
