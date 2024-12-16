@@ -19,14 +19,14 @@ pipeline {
                 sh 'echo Hello'
             }
         }
-        // stage('Clone repository') {
-        //     when {
-        //         expression { params.CD == "Development" }
-        //     }
-        //     steps {
-        //         git branch: 'main', credentialsId: 'Ndkn', url: 'https://github.com/ndknitor/AspTemplate'
-        //     }
-        // }
+        stage('Clone repository') {
+            steps {
+                script {
+                    git branch: 'main', credentialsId: 'github_credential', url: 'https://github.com/ndknitor/AspTemplate'
+                }
+                
+            }
+        }
 
         // stage('Clone Repositories') {
         //     steps {
