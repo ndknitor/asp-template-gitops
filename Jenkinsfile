@@ -19,7 +19,7 @@ pipeline {
                 sh 'echo Hello'
             }
         }
-        stage('Clone repository') {
+        stage('Clone project repository') {
             when {
                 expression { params.CD == "None" || params.CD == "Development" || params.Auto }
             }
@@ -77,6 +77,9 @@ pipeline {
             }
         }
         stage('Registry authentication') {
+            when {
+                expression { params.CD != "None" || params.Auto}
+            }
             steps {
                 script{
                     withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
@@ -152,14 +155,6 @@ pipeline {
                 //         }
                 //     }
                 // }
-            }
-        }
-        stage('Clone Ops Repository') {
-            steps {
-                script {
-                    // Clone the source repository
-                    git credentialsId: "github_credential", url: "https://github.com/ndknitor/asp-template-gitops"
-                }
             }
         }
     }
