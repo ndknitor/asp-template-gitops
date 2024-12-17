@@ -173,7 +173,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'github_credential', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
                     script {
-                        def NEW_VERSION = sh(
+                        NEW_VERSION = sh(
                             script: 'echo $(($(<k8s/VERSION) + 1))',
                             returnStdout: true
                         ).trim()
