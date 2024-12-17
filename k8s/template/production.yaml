@@ -16,8 +16,7 @@ spec:
       - name: local-registry-secret
       containers:
       - name: asp-template-container
-        image: utility.ndkn.local/ndkn/asp-template
-        imagePullPolicy: Always
+        image: utility.ndkn.local/ndkn/asp-template:{{VERSION}}
         ports:
         - containerPort: 8080
         resources:
@@ -26,7 +25,7 @@ spec:
             cpu: "500m"
         env:
         - name: ASPNETCORE_ENVIRONMENT
-          value: "Development"
+          value: "Production"
 
 ---
 
