@@ -177,7 +177,6 @@ pipeline {
                             script: 'echo $(($(<k8s/VERSION) + 1))',
                             returnStdout: true
                         ).trim()
-                        sh "git pull"
                         sh """sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml"""
                         sh 'git add k8s/'
                         sh """git commit -m "Triggered production Build: ${NEW_VERSION}"""
