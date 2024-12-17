@@ -173,6 +173,11 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'github_credential', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
                     script {
+                        def NEW_VERSION = sh(
+                            script: 'echo $(($(<k8s/VERSION) + 1))',
+                            returnStdout: true
+                        ).trim()
+                        sh "echo ${NEW_VERSION}"
                         sh 'sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml'
                         sh 'git add k8s/'
                         sh 'git commit -m "Triggered production Build: ${NEW_VERSION}"'
