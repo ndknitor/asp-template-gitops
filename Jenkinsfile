@@ -5,6 +5,8 @@
 // sed -e "s/{{VERSION}}/$(($(<k8s/VERSION)))/g" k8s/template/production.yaml > k8s/value/production.yaml
 
 // git add k8s/
+def productionAllowedUsers = ["kn"]
+
 pipeline {
     agent any
     environment {
@@ -154,6 +156,36 @@ pipeline {
                 //         }
                 //     }
                 // }
+            }
+        }
+        stage('Deploy production') {
+            when {
+                allOf {
+                    expression {
+                        def triggeredBy = currentBuild.getBuildCauses()[0]?.userId
+                        echo "Triggered by: ${triggeredBy}"
+                        return triggeredBy in productionAllowedUsers &&
+                               (params.CD == "Production" || params.CD == "PassProduction" || params.Auto)
+                    }
+                }
+                expression { params.CD == "Production" || params.CD == "PassProduction" || params.Auto}
+            }
+            steps {
+                withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                    def newVersion = sh(
+                        script: 'echo $(($(<k8s/VERSION) + 1))',
+                        returnStdout: true
+                    ).trim()
+                    sh 'echo ${newVersion}'
+             
+                    sh 'docker tag ${IMAGE_NAME}:staging ${IMAGE_NAME}:${newVersion}'
+                    sh 'docker push ${IMAGE_NAME}:${newVersion}'
+                    sh 'sed -e "s/{{VERSION}}/${newVersion}/g" k8s/template/production.yaml > k8s/value/production.yaml'
+                    sh '''
+                        curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
+                    '''
+                    sh 'docker image rm ${IMAGE_NAME}:${newVersion}'
+                }
             }
         }
     }
