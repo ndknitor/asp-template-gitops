@@ -1,8 +1,9 @@
 // Generic Webhook Trigger
 // SSH Agent
 
-// sed -e "s/{{VERSION}}/$(($(<k8s/VERSION) + 1))/g" k8s/template/production.yaml > k8s/value/production.yaml
 // echo $(($(<k8s/VERSION) + 1)) > k8s/VERSION
+// sed -e "s/{{VERSION}}/$(($(<k8s/VERSION)))/g" k8s/template/production.yaml > k8s/value/production.yaml
+
 // git add k8s/
 pipeline {
     agent any
