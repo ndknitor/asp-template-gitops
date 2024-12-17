@@ -171,7 +171,7 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'github_credential', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD')]) {
+                withCredentials([usernamePassword(credentialsId: 'github_credential', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
                     script {
                         sh 'sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml'
                         sh 'git add k8s/'
