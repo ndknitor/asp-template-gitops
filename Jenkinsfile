@@ -178,7 +178,7 @@ pipeline {
                             returnStdout: true
                         ).trim()
                         sh """sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml"""
-                        sh "echo k8s/VERSION > ${NEW_VERSION}"
+                        sh "echo ${NEW_VERSION}> k8s/VERSION "
                         sh 'git add k8s/'
                         sh """git commit -m "Triggered production Build: ${NEW_VERSION}" """
                         sh 'git push https://${GIT_USERNAME}:${GIT_PASSWORD}@${OPS_REPOSITORY} HEAD:main'
