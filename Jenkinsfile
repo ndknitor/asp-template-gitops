@@ -2,14 +2,7 @@
 // SSH Agent
 def PRODUCTION_ALLOWED_USERS = ["kn"]
 
-def REGISTRY = "utility.ndkn.local"
-def IMAGE_NAME = "utility.ndkn.local/ndkn/asp-template"
 
-def ARGOCD_SERVER= "192.168.121.104:30892"
-def ARGOCD_APP_NAME = "asp-template"
-def ARGOCD_NAMESPACE = "asp-template"
-def ARGOCD_RESOURCE_NAME_DEVELOPMENT = "asp-template-deployment-development"
-def ARGOCD_RESOURCE_NAME_STAGING = "asp-template-deployment-staging"
 pipeline {
     agent any
     environment {
@@ -19,6 +12,14 @@ pipeline {
         GIT_CREDENTIALS_ID = "github_credential"
         REGISTRY_CREDENTIAL_ID = "registry_credential"
         ARGOCD_CREDENTIAL_ID = "argocd_token"
+
+        REGISTRY = "utility.ndkn.local"
+        IMAGE_NAME = "utility.ndkn.local/ndkn/asp-template"
+        ARGOCD_SERVER= "192.168.121.104:30892"
+        ARGOCD_APP_NAME = "asp-template"
+        ARGOCD_NAMESPACE = "asp-template"
+        ARGOCD_RESOURCE_NAME_DEVELOPMENT = "asp-template-deployment-development"
+        ARGOCD_RESOURCE_NAME_STAGING = "asp-template-deployment-staging"
     }
     stages {
         stage('Clone project repository') {
@@ -84,7 +85,7 @@ pipeline {
             }
             steps {
                 script{
-                    withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    withCredentials([usernamePassword(credentialsId: env.REGISTRY_CREDENTIAL_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh 'docker login ${REGISTRY} -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"'
                     }
                 }
@@ -175,7 +176,7 @@ pipeline {
                         sh 'sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml'
                         sh 'git add k8s/'
                         sh 'git commit -m "Triggered production Build: ${NEW_VERSION}"'
-                        sh 'git push'
+                        sh 'git push https://${GIT_USERNAME}:${GIT_PASSWORD}@${OPS_REPOSITORY}'
                         sh 'docker tag ${IMAGE_NAME}:staging ${IMAGE_NAME}:${NEW_VERSION}'
                         sh 'docker push ${IMAGE_NAME}:${NEW_VERSION}'
                         sh 'docker image rm ${IMAGE_NAME}:${NEW_VERSION}'
