@@ -13,7 +13,12 @@ def ARGOCD_RESOURCE_NAME_STAGING = "asp-template-deployment-staging"
 pipeline {
     agent any
     environment {
+        OPS_REPOSITORY = "github.com/ndknitor/asp-template-gitops"
+        PROJECT_REPOSITORY = "https://github.com/ndknitor/AspTemplate"
 
+        GIT_CREDENTIALS_ID = "github_credential"
+        REGISTRY_CREDENTIAL_ID = "registry_credential"
+        ARGOCD_CREDENTIAL_ID = "argocd_token"
     }
     stages {
         stage('Clone project repository') {
@@ -23,7 +28,7 @@ pipeline {
             steps {
                 script {
                     dir('projects') {
-                       git branch: 'main', credentialsId: 'github_credential', url: 'https://github.com/ndknitor/AspTemplate'
+                       git branch: 'main', credentialsId: env.GIT_CREDENTIALS_ID, url: env.PROJECT_REPOSITORY
                     }
                 }
             }
@@ -79,7 +84,7 @@ pipeline {
             }
             steps {
                 script{
-                    withCredentials([usernamePassword(credentialsId: 'registry_credential', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    withCredentials([usernamePassword(credentialsId: env.REGISTRY_CREDENTIAL_ID, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                         sh 'docker login ${REGISTRY} -u="${DOCKER_USERNAME}" -p="${DOCKER_PASSWORD}"'
                     }
                 }
@@ -102,7 +107,7 @@ pipeline {
             }
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                    withCredentials([string(credentialsId: env.ARGOCD_CREDENTIAL_ID, variable: 'ARGOCD_TOKEN')]) {
                         sh '''
                         curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_DEVELOPMENT}&version=v1&kind=Deployment&group=apps" 
                         '''
@@ -115,7 +120,7 @@ pipeline {
                 expression { params.CD == "Staging" || params.CD == "PassProduction" || params.Auto}
             }
             steps {
-                withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                withCredentials([string(credentialsId: env.ARGOCD_CREDENTIAL_ID, variable: 'ARGOCD_TOKEN')]) {
                     sh 'docker tag ${IMAGE_NAME}:development ${IMAGE_NAME}:staging'
                     sh 'docker push ${IMAGE_NAME}:staging'
                     sh '''
@@ -154,35 +159,50 @@ pipeline {
                 // }
             }
         }
-        stage('Deploy production') {
+        stage ('Push change to Ops Repository') {
             when {
                 allOf {
                     expression {
                         def triggeredBy = currentBuild.getBuildCauses()[0]?.userId
-                        echo "Triggered by: ${triggeredBy}"
                         return triggeredBy in PRODUCTION_ALLOWED_USERS &&
                                (params.CD == "Production" || params.CD == "PassProduction" || params.Auto)
                     }
                 }
             }
             steps {
-                withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                withCredentials([usernamePassword(credentialsId: env.GIT_CREDENTIALS_ID, usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_PASSWORD')]) {
                     script {
-                        NEW_VERSION = sh(
-                            script: 'echo $(($(<k8s/VERSION) + 1))',
-                            returnStdout: true
-                        ).trim()
+                        sh 'sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml'
+                        sh 'git add k8s/'
+                        sh 'git commit -m "Triggered production Build: ${NEW_VERSION}"'
+                        sh 'git push'
                         sh 'docker tag ${IMAGE_NAME}:staging ${IMAGE_NAME}:${NEW_VERSION}'
                         sh 'docker push ${IMAGE_NAME}:${NEW_VERSION}'
-                        sh 'sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml'
-                        sh '''
-                            curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
-                        '''
                         sh 'docker image rm ${IMAGE_NAME}:${NEW_VERSION}'
                     }
                 }
             }
         }
+        // stage('Deploy production') {
+        //     when {
+        //         allOf {
+        //             expression {
+        //                 def triggeredBy = currentBuild.getBuildCauses()[0]?.userId
+        //                 return triggeredBy in PRODUCTION_ALLOWED_USERS &&
+        //                        (params.CD == "Production" || params.CD == "PassProduction" || params.Auto)
+        //             }
+        //         }
+        //     }
+        //     steps {
+        //         withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+        //             script {
+        //                 sh '''
+        //                     curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
     }
     post {
         always {
