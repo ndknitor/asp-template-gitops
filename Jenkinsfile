@@ -189,26 +189,26 @@ pipeline {
                 }
             }
         }
-        // stage('Deploy production') {
-        //     when {
-        //         allOf {
-        //             expression {
-        //                 def triggeredBy = currentBuild.getBuildCauses()[0]?.userId
-        //                 return triggeredBy in PRODUCTION_ALLOWED_USERS &&
-        //                        (params.CD == "Production" || params.CD == "PassProduction" || params.Auto)
-        //             }
-        //         }
-        //     }
-        //     steps {
-        //         withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
-        //             script {
-        //                 sh '''
-        //                     curl --insecure -X POST -H "Content-Type: application/json" -d '"restart"' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/resource/actions?appNamespace=argocd&namespace=${ARGOCD_NAMESPACE}&resourceName=${ARGOCD_RESOURCE_NAME_STAGING}&version=v1&kind=Deployment&group=apps" 
-        //                 '''
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Trigger ArgoCD sync') {
+            when {
+                allOf {
+                    expression {
+                        def triggeredBy = currentBuild.getBuildCauses()[0]?.userId
+                        return triggeredBy in PRODUCTION_ALLOWED_USERS &&
+                               (params.CD == "Production" || params.CD == "PassProduction" || params.Auto)
+                    }
+                }
+            }
+            steps {
+                withCredentials([string(credentialsId: 'argocd_token', variable: 'ARGOCD_TOKEN')]) {
+                    script {
+                        sh '''
+                            curl --insecure -X POST -H "Content-Type: application/json" -d '{"appNamespace":"argocd","revision":"HEAD","prune":false,"dryRun":false,"strategy":{"hook":{"force":false}},"resources":null,"syncOptions":{"items":[]}}' -H "Authorization: Bearer ${ARGOCD_TOKEN}" "https://${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}/sync" 
+                        '''
+                    }
+                }
+            }
+        }
     }
     post {
         always {
