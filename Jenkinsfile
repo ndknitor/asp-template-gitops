@@ -174,7 +174,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'github_credential', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
                     script {
                         NEW_VERSION = sh(
-                            script: 'echo $(($(<k8s/VERSION) + 1))',
+                            script: 'echo $(( $(cat k8s/VERSION) + 1 ))',
                             returnStdout: true
                         ).trim()
                         sh """sed -e "s/{{VERSION}}/${NEW_VERSION}/g" k8s/template/production.yaml > k8s/value/production.yaml"""
